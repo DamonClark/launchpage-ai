@@ -230,7 +230,7 @@ export default function GeneratedPage({ data, pageSlug, isPreview = false }: Gen
               {section.icon && <span className="text-5xl">{section.icon}</span>}
               <span className="block mt-4">{section.title}</span>
             </h2>
-            <div className="grid md:grid-cols-1 gap-6 max-w-5xl mx-auto">
+            <div className="grid md:grid-cols-1 gap-6 max-w-2xl mx-auto">
               {items.slice(0, 6).map((item, i) => (
                 <div key={i} className="bg-white shadow-lg rounded-xl p-6">
                   <p className={`${theme.sectionSubtext} text-sm leading-relaxed`}>{item.trim()}</p>

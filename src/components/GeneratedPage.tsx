@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { GeneratedPageData } from '@/lib/openai';
 import LeadForm from './LeadForm';
 import PaymentBlock from './PaymentBlock';
@@ -160,12 +160,16 @@ function getSectionLayout(section: GeneratedPageData['sections'][0], idx: number
 
 export default function GeneratedPage({ data, pageSlug, isPreview = false }: GeneratedPageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [randomTheme] = useState(() => getRandomTheme());
-  const [heroStyle] = useState(() => {
-    // Pick random hero style
+  const [randomTheme, setRandomTheme] = useState<ThemeKey>('indigo');
+  const [heroStyle, setHeroStyle] = useState<string>('centered');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    setRandomTheme(getRandomTheme());
     const styles = ['centered', 'large', 'minimal', 'bold'];
-    return styles[Math.floor(Math.random() * styles.length)];
-  });
+    setHeroStyle(styles[Math.floor(Math.random() * styles.length)]);
+  }, []);
 
   const handlePublish = async () => {
     setIsSubmitting(true);
@@ -177,7 +181,6 @@ export default function GeneratedPage({ data, pageSlug, isPreview = false }: Gen
       });
       if (!response.ok) throw new Error('Failed to publish page');
       const result = await response.json();
-      alert(`Page published! URL copied to clipboard: ${result.url}`);
       await navigator.clipboard.writeText(result.url);
       // Redirect to the published page
       window.location.href = result.url;
@@ -191,6 +194,10 @@ export default function GeneratedPage({ data, pageSlug, isPreview = false }: Gen
 
   // Use random theme selected on component mount
   const theme = themes[randomTheme];
+
+  if (!mounted) {
+    return null;
+  }
 
   const renderSection = (section: GeneratedPageData['sections'][0], idx: number) => {
     const layout = getSectionLayout(section, idx);
@@ -231,7 +238,7 @@ export default function GeneratedPage({ data, pageSlug, isPreview = false }: Gen
               {section.icon && <span className="text-5xl">{section.icon}</span>}
               <span className="block mt-4">{section.title}</span>
             </h2>
-            <div className="grid md:grid-cols-1 gap-6 max-w-2xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-1 gap-6 max-w-4xl mx-auto">
               {items.slice(0, 6).map((item, i) => (
                 <div key={i} className="bg-white shadow-lg rounded-xl p-6">
                   <p className={`${theme.sectionSubtext} text-sm leading-relaxed`}>{item.trim()}</p>
@@ -302,7 +309,20 @@ export default function GeneratedPage({ data, pageSlug, isPreview = false }: Gen
             </p>
             <div className="mt-8">
               {data.goalType === 'lead' && pageSlug ? (
-                <LeadForm pageSlug={pageSlug} />
+                <div className="max-w-md mx-auto">
+                  <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4">
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <input
+                        type="email"
+                        placeholder="Enter your email..."
+                        className="flex-1 px-4 py-3 rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400 text-base"
+                      />
+                      <button className="bg-gray-900 text-white px-6 py-3 rounded-lg font-bold hover:bg-gray-800 transition-colors whitespace-nowrap w-full sm:w-auto">
+                        Get Started
+                      </button>
+                    </div>
+                  </div>
+                </div>
               ) : data.goalType === 'payment' ? (
                 <PaymentBlock data={data} pageSlug={pageSlug} />
               ) : data.goalType === 'booking' ? (

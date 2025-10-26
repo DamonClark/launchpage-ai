@@ -69,7 +69,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    // Determine the correct base URL
+    const isProduction = process.env.NODE_ENV === 'production';
+    const baseUrl = isProduction
+      ? 'https://www.launchpageai.dev'
+      : (process.env.NEXTAUTH_URL || 'http://localhost:3000');
+
     const url = `${baseUrl}/${finalSlug}`;
 
     return NextResponse.json({
@@ -78,7 +83,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Publish page error:', error);
-    
+
     if (error instanceof Error) {
       return NextResponse.json(
         { error: error.message },

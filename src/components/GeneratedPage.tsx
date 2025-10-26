@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { GeneratedPageData } from '@/lib/openai';
 import LeadForm from './LeadForm';
-
-// Lean MVP focuses on email capture only - removed Payment and Booking components
+import PaymentBlock from './PaymentBlock';
+import BookingBlock from './BookingBlock';
 
 interface GeneratedPageProps {
   data: GeneratedPageData;
@@ -12,528 +12,409 @@ interface GeneratedPageProps {
   isPreview?: boolean;
 }
 
-/**
- * GeneratedPage component renders a landing page based on AI-generated data
- * The goalType in data determines which conversion component to render:
- * - 'lead' → LeadForm (email capture)
- * - 'payment' → PaymentBlock (Stripe checkout)
- * - 'booking' → BookingBlock (Calendly embed)
- */
+type ThemeKey = 'indigo' | 'purple' | 'blue' | 'emerald' | 'rose' | 'amber' | 'cyan' | 'teal' | 'pink' | 'violet';
+
+interface Theme {
+  heroBg: string;
+  heroText: string;
+  heroButton: string;
+  sectionBg: string;
+  sectionText: string;
+  sectionSubtext: string;
+  footerBg: string;
+  footerText: string;
+  accentColor: string;
+}
+
+const colorThemes: Record<ThemeKey, Theme> = {
+  indigo: {
+    heroBg: 'bg-gradient-to-br from-indigo-600 via-indigo-500 to-purple-600',
+    heroText: 'text-white',
+    heroButton: 'bg-white text-indigo-600 hover:bg-indigo-50 px-8 py-4 rounded-xl font-bold shadow-xl transition-all',
+    sectionBg: 'bg-indigo-50',
+    sectionText: 'text-indigo-900',
+    sectionSubtext: 'text-indigo-700',
+    footerBg: 'bg-indigo-900',
+    footerText: 'text-white',
+    accentColor: 'indigo',
+  },
+  purple: {
+    heroBg: 'bg-gradient-to-br from-purple-600 via-purple-500 to-pink-600',
+    heroText: 'text-white',
+    heroButton: 'bg-white text-purple-600 hover:bg-purple-50 px-8 py-4 rounded-xl font-bold shadow-xl transition-all',
+    sectionBg: 'bg-purple-50',
+    sectionText: 'text-purple-900',
+    sectionSubtext: 'text-purple-700',
+    footerBg: 'bg-purple-900',
+    footerText: 'text-white',
+    accentColor: 'purple',
+  },
+  blue: {
+    heroBg: 'bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-600',
+    heroText: 'text-white',
+    heroButton: 'bg-white text-blue-600 hover:bg-blue-50 px-8 py-4 rounded-xl font-bold shadow-xl transition-all',
+    sectionBg: 'bg-blue-50',
+    sectionText: 'text-blue-900',
+    sectionSubtext: 'text-blue-700',
+    footerBg: 'bg-blue-900',
+    footerText: 'text-white',
+    accentColor: 'blue',
+  },
+  emerald: {
+    heroBg: 'bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-600',
+    heroText: 'text-white',
+    heroButton: 'bg-white text-emerald-600 hover:bg-emerald-50 px-8 py-4 rounded-xl font-bold shadow-xl transition-all',
+    sectionBg: 'bg-emerald-50',
+    sectionText: 'text-emerald-900',
+    sectionSubtext: 'text-emerald-700',
+    footerBg: 'bg-emerald-900',
+    footerText: 'text-white',
+    accentColor: 'emerald',
+  },
+  rose: {
+    heroBg: 'bg-gradient-to-br from-rose-600 via-rose-500 to-pink-600',
+    heroText: 'text-white',
+    heroButton: 'bg-white text-rose-600 hover:bg-rose-50 px-8 py-4 rounded-xl font-bold shadow-xl transition-all',
+    sectionBg: 'bg-rose-50',
+    sectionText: 'text-rose-900',
+    sectionSubtext: 'text-rose-700',
+    footerBg: 'bg-rose-900',
+    footerText: 'text-white',
+    accentColor: 'rose',
+  },
+  amber: {
+    heroBg: 'bg-gradient-to-br from-amber-600 via-amber-500 to-orange-600',
+    heroText: 'text-white',
+    heroButton: 'bg-white text-amber-600 hover:bg-amber-50 px-8 py-4 rounded-xl font-bold shadow-xl transition-all',
+    sectionBg: 'bg-amber-50',
+    sectionText: 'text-amber-900',
+    sectionSubtext: 'text-amber-700',
+    footerBg: 'bg-amber-900',
+    footerText: 'text-white',
+    accentColor: 'amber',
+  },
+  cyan: {
+    heroBg: 'bg-gradient-to-br from-cyan-600 via-cyan-500 to-blue-600',
+    heroText: 'text-white',
+    heroButton: 'bg-white text-cyan-600 hover:bg-cyan-50 px-8 py-4 rounded-xl font-bold shadow-xl transition-all',
+    sectionBg: 'bg-cyan-50',
+    sectionText: 'text-cyan-900',
+    sectionSubtext: 'text-cyan-700',
+    footerBg: 'bg-cyan-900',
+    footerText: 'text-white',
+    accentColor: 'cyan',
+  },
+  teal: {
+    heroBg: 'bg-gradient-to-br from-teal-600 via-teal-500 to-emerald-600',
+    heroText: 'text-white',
+    heroButton: 'bg-white text-teal-600 hover:bg-teal-50 px-8 py-4 rounded-xl font-bold shadow-xl transition-all',
+    sectionBg: 'bg-teal-50',
+    sectionText: 'text-teal-900',
+    sectionSubtext: 'text-teal-700',
+    footerBg: 'bg-teal-900',
+    footerText: 'text-white',
+    accentColor: 'teal',
+  },
+  pink: {
+    heroBg: 'bg-gradient-to-br from-pink-600 via-pink-500 to-rose-600',
+    heroText: 'text-white',
+    heroButton: 'bg-white text-pink-600 hover:bg-pink-50 px-8 py-4 rounded-xl font-bold shadow-xl transition-all',
+    sectionBg: 'bg-pink-50',
+    sectionText: 'text-pink-900',
+    sectionSubtext: 'text-pink-700',
+    footerBg: 'bg-pink-900',
+    footerText: 'text-white',
+    accentColor: 'pink',
+  },
+  violet: {
+    heroBg: 'bg-gradient-to-br from-violet-600 via-violet-500 to-purple-600',
+    heroText: 'text-white',
+    heroButton: 'bg-white text-violet-600 hover:bg-violet-50 px-8 py-4 rounded-xl font-bold shadow-xl transition-all',
+    sectionBg: 'bg-violet-50',
+    sectionText: 'text-violet-900',
+    sectionSubtext: 'text-violet-700',
+    footerBg: 'bg-violet-900',
+    footerText: 'text-white',
+    accentColor: 'violet',
+  },
+};
+
+const themes = colorThemes;
+
+function getRandomTheme(): ThemeKey {
+  const keys: ThemeKey[] = Object.keys(themes) as ThemeKey[];
+  return keys[Math.floor(Math.random() * keys.length)];
+}
+
+type SectionLayout = 'stacked' | 'split' | 'grid';
+
+function getSectionLayout(section: GeneratedPageData['sections'][0], idx: number): SectionLayout {
+  // First check if section has explicit layout from AI
+  if (section.layout === 'split') return 'split';
+  if (section.layout === 'card' || section.layout === 'feature') return 'grid';
+
+  // Alternate patterns
+  const layouts: SectionLayout[] = ['stacked', 'split', 'stacked', 'grid', 'stacked', 'split'];
+  return layouts[idx % layouts.length];
+}
+
 export default function GeneratedPage({ data, pageSlug, isPreview = false }: GeneratedPageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [randomTheme] = useState(() => getRandomTheme());
+  const [heroStyle] = useState(() => {
+    // Pick random hero style
+    const styles = ['centered', 'large', 'minimal', 'bold'];
+    return styles[Math.floor(Math.random() * styles.length)];
+  });
 
-  /**
-   * Handle publishing the generated page to Supabase
-   * After successful publish, redirect to the published page
-   */
   const handlePublish = async () => {
+    if (!pageSlug) return;
     setIsSubmitting(true);
     try {
-      // Send page JSON to publish API
       const response = await fetch('/api/publish-page', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          pageJson: data, // Send the entire generated page data
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pageJson: data }),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || 'Failed to publish page');
-      }
-
+      if (!response.ok) throw new Error('Failed to publish page');
       const result = await response.json();
-      setShowSuccess(true);
-
-      // Copy URL to clipboard
-      if (result.url) {
-        await navigator.clipboard.writeText(result.url).catch(() => {
-          // Clipboard API might fail in some contexts, ignore silently
-        });
-      }
-
-      // Redirect to the published page immediately
-      if (result.slug) {
-        window.location.href = `/${result.slug}`;
-      }
+      alert(`Page published! URL copied to clipboard: ${result.url}`);
+      await navigator.clipboard.writeText(result.url);
     } catch (error) {
-      console.error('Publish error:', error);
-      // Show error alert to user
-      alert(`Failed to publish page: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`);
+      console.error(error);
+      alert('Failed to publish page. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  /**
-   * Dynamic color scheme mapping - creates variety in generated pages
-   * Uses complete Tailwind class names for JIT compilation compatibility
-   */
-  const getColorClasses = (colorScheme?: { primary: string; accent: string; style: string }) => {
-    // Default to indigo if no color scheme provided
-    if (!colorScheme) {
-        return {
-        hero: 'bg-gradient-to-br from-indigo-50 via-white to-purple-50',
-        heroText: 'text-gray-900',
-        subheadText: 'text-gray-700',
-        button: 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg',
-        sectionLight: 'bg-white',
-        sectionDark: 'bg-gray-50',
-      };
-    }
+  // Use random theme selected on component mount
+  const theme = themes[randomTheme];
 
-    const { primary, accent, style } = colorScheme;
+  const renderSection = (section: GeneratedPageData['sections'][0], idx: number) => {
+    const layout = getSectionLayout(section, idx);
+    // Alternate between colored and white backgrounds
+    const bgClass = idx % 2 === 0
+      ? `${theme.sectionBg}`
+      : 'bg-white';
 
-    // Complete Tailwind class combinations for each color pair
-    const gradientMap: Record<string, Record<string, { gradient: string; bold: string; minimal: string }>> = {
-      // Primary: indigo
-      indigo: {
-        pink: { gradient: 'bg-gradient-to-br from-indigo-50 via-white to-pink-50', bold: 'bg-gradient-to-r from-indigo-100 to-pink-100', minimal: 'bg-gradient-to-b from-white to-indigo-50' },
-        orange: { gradient: 'bg-gradient-to-br from-indigo-50 via-white to-orange-50', bold: 'bg-gradient-to-r from-indigo-100 to-orange-100', minimal: 'bg-gradient-to-b from-white to-indigo-50' },
-        cyan: { gradient: 'bg-gradient-to-br from-indigo-50 via-white to-cyan-50', bold: 'bg-gradient-to-r from-indigo-100 to-cyan-100', minimal: 'bg-gradient-to-b from-white to-indigo-50' },
-        lime: { gradient: 'bg-gradient-to-br from-indigo-50 via-white to-lime-50', bold: 'bg-gradient-to-r from-indigo-100 to-lime-100', minimal: 'bg-gradient-to-b from-white to-indigo-50' },
-        violet: { gradient: 'bg-gradient-to-br from-indigo-50 via-white to-violet-50', bold: 'bg-gradient-to-r from-indigo-100 to-violet-100', minimal: 'bg-gradient-to-b from-white to-indigo-50' },
-        fuchsia: { gradient: 'bg-gradient-to-br from-indigo-50 via-white to-fuchsia-50', bold: 'bg-gradient-to-r from-indigo-100 to-fuchsia-100', minimal: 'bg-gradient-to-b from-white to-indigo-50' },
-        sky: { gradient: 'bg-gradient-to-br from-indigo-50 via-white to-sky-50', bold: 'bg-gradient-to-r from-indigo-100 to-sky-100', minimal: 'bg-gradient-to-b from-white to-indigo-50' },
-        yellow: { gradient: 'bg-gradient-to-br from-indigo-50 via-white to-yellow-50', bold: 'bg-gradient-to-r from-indigo-100 to-yellow-100', minimal: 'bg-gradient-to-b from-white to-indigo-50' },
-      },
-      // Primary: purple
-      purple: {
-        pink: { gradient: 'bg-gradient-to-br from-purple-50 via-white to-pink-50', bold: 'bg-gradient-to-r from-purple-100 to-pink-100', minimal: 'bg-gradient-to-b from-white to-purple-50' },
-        orange: { gradient: 'bg-gradient-to-br from-purple-50 via-white to-orange-50', bold: 'bg-gradient-to-r from-purple-100 to-orange-100', minimal: 'bg-gradient-to-b from-white to-purple-50' },
-        cyan: { gradient: 'bg-gradient-to-br from-purple-50 via-white to-cyan-50', bold: 'bg-gradient-to-r from-purple-100 to-cyan-100', minimal: 'bg-gradient-to-b from-white to-purple-50' },
-        lime: { gradient: 'bg-gradient-to-br from-purple-50 via-white to-lime-50', bold: 'bg-gradient-to-r from-purple-100 to-lime-100', minimal: 'bg-gradient-to-b from-white to-purple-50' },
-        fuchsia: { gradient: 'bg-gradient-to-br from-purple-50 via-white to-fuchsia-50', bold: 'bg-gradient-to-r from-purple-100 to-fuchsia-100', minimal: 'bg-gradient-to-b from-white to-purple-50' },
-      },
-      // Primary: blue
-      blue: {
-        pink: { gradient: 'bg-gradient-to-br from-blue-50 via-white to-pink-50', bold: 'bg-gradient-to-r from-blue-100 to-pink-100', minimal: 'bg-gradient-to-b from-white to-blue-50' },
-        cyan: { gradient: 'bg-gradient-to-br from-blue-50 via-white to-cyan-50', bold: 'bg-gradient-to-r from-blue-100 to-cyan-100', minimal: 'bg-gradient-to-b from-white to-blue-50' },
-        sky: { gradient: 'bg-gradient-to-br from-blue-50 via-white to-sky-50', bold: 'bg-gradient-to-r from-blue-100 to-sky-100', minimal: 'bg-gradient-to-b from-white to-blue-50' },
-        indigo: { gradient: 'bg-gradient-to-br from-blue-50 via-white to-indigo-50', bold: 'bg-gradient-to-r from-blue-100 to-indigo-100', minimal: 'bg-gradient-to-b from-white to-blue-50' },
-      },
-      // Primary: emerald
-      emerald: {
-        lime: { gradient: 'bg-gradient-to-br from-emerald-50 via-white to-lime-50', bold: 'bg-gradient-to-r from-emerald-100 to-lime-100', minimal: 'bg-gradient-to-b from-white to-emerald-50' },
-        cyan: { gradient: 'bg-gradient-to-br from-emerald-50 via-white to-cyan-50', bold: 'bg-gradient-to-r from-emerald-100 to-cyan-100', minimal: 'bg-gradient-to-b from-white to-emerald-50' },
-        yellow: { gradient: 'bg-gradient-to-br from-emerald-50 via-white to-yellow-50', bold: 'bg-gradient-to-r from-emerald-100 to-yellow-100', minimal: 'bg-gradient-to-b from-white to-emerald-50' },
-      },
-      // Primary: rose
-      rose: {
-        pink: { gradient: 'bg-gradient-to-br from-rose-50 via-white to-pink-50', bold: 'bg-gradient-to-r from-rose-100 to-pink-100', minimal: 'bg-gradient-to-b from-white to-rose-50' },
-        orange: { gradient: 'bg-gradient-to-br from-rose-50 via-white to-orange-50', bold: 'bg-gradient-to-r from-rose-100 to-orange-100', minimal: 'bg-gradient-to-b from-white to-rose-50' },
-        fuchsia: { gradient: 'bg-gradient-to-br from-rose-50 via-white to-fuchsia-50', bold: 'bg-gradient-to-r from-rose-100 to-fuchsia-100', minimal: 'bg-gradient-to-b from-white to-rose-50' },
-      },
-      // Primary: cyan
-      cyan: {
-        purple: { gradient: 'bg-gradient-to-br from-cyan-50 via-white to-purple-50', bold: 'bg-gradient-to-r from-cyan-100 to-purple-100', minimal: 'bg-gradient-to-b from-white to-cyan-50' },
-        violet: { gradient: 'bg-gradient-to-br from-cyan-50 via-white to-violet-50', bold: 'bg-gradient-to-r from-cyan-100 to-violet-100', minimal: 'bg-gradient-to-b from-white to-cyan-50' },
-        pink: { gradient: 'bg-gradient-to-br from-cyan-50 via-white to-pink-50', bold: 'bg-gradient-to-r from-cyan-100 to-pink-100', minimal: 'bg-gradient-to-b from-white to-cyan-50' },
-        sky: { gradient: 'bg-gradient-to-br from-cyan-50 via-white to-sky-50', bold: 'bg-gradient-to-r from-cyan-100 to-sky-100', minimal: 'bg-gradient-to-b from-white to-cyan-50' },
-      },
-      // Primary: teal
-      teal: {
-        cyan: { gradient: 'bg-gradient-to-br from-teal-50 via-white to-cyan-50', bold: 'bg-gradient-to-r from-teal-100 to-cyan-100', minimal: 'bg-gradient-to-b from-white to-teal-50' },
-        lime: { gradient: 'bg-gradient-to-br from-teal-50 via-white to-lime-50', bold: 'bg-gradient-to-r from-teal-100 to-lime-100', minimal: 'bg-gradient-to-b from-white to-teal-50' },
-        emerald: { gradient: 'bg-gradient-to-br from-teal-50 via-white to-emerald-50', bold: 'bg-gradient-to-r from-teal-100 to-emerald-100', minimal: 'bg-gradient-to-b from-white to-teal-50' },
-      },
-      // Primary: pink
-      pink: {
-        orange: { gradient: 'bg-gradient-to-br from-pink-50 via-white to-orange-50', bold: 'bg-gradient-to-r from-pink-100 to-orange-100', minimal: 'bg-gradient-to-b from-white to-pink-50' },
-        fuchsia: { gradient: 'bg-gradient-to-br from-pink-50 via-white to-fuchsia-50', bold: 'bg-gradient-to-r from-pink-100 to-fuchsia-100', minimal: 'bg-gradient-to-b from-white to-pink-50' },
-        violet: { gradient: 'bg-gradient-to-br from-pink-50 via-white to-violet-50', bold: 'bg-gradient-to-r from-pink-100 to-violet-100', minimal: 'bg-gradient-to-b from-white to-pink-50' },
-        rose: { gradient: 'bg-gradient-to-br from-pink-50 via-white to-rose-50', bold: 'bg-gradient-to-r from-pink-100 to-rose-100', minimal: 'bg-gradient-to-b from-white to-pink-50' },
-      },
-      // Primary: violet
-      violet: {
-        fuchsia: { gradient: 'bg-gradient-to-br from-violet-50 via-white to-fuchsia-50', bold: 'bg-gradient-to-r from-violet-100 to-fuchsia-100', minimal: 'bg-gradient-to-b from-white to-violet-50' },
-        purple: { gradient: 'bg-gradient-to-br from-violet-50 via-white to-purple-50', bold: 'bg-gradient-to-r from-violet-100 to-purple-100', minimal: 'bg-gradient-to-b from-white to-violet-50' },
-        pink: { gradient: 'bg-gradient-to-br from-violet-50 via-white to-pink-50', bold: 'bg-gradient-to-r from-violet-100 to-pink-100', minimal: 'bg-gradient-to-b from-white to-violet-50' },
-      },
-      // Primary: amber
-      amber: {
-        yellow: { gradient: 'bg-gradient-to-br from-amber-50 via-white to-yellow-50', bold: 'bg-gradient-to-r from-amber-100 to-yellow-100', minimal: 'bg-gradient-to-b from-white to-amber-50' },
-        orange: { gradient: 'bg-gradient-to-br from-amber-50 via-white to-orange-50', bold: 'bg-gradient-to-r from-amber-100 to-orange-100', minimal: 'bg-gradient-to-b from-white to-amber-50' },
-      },
-      // Primary: orange
-      orange: {
-        pink: { gradient: 'bg-gradient-to-br from-orange-50 via-white to-pink-50', bold: 'bg-gradient-to-r from-orange-100 to-pink-100', minimal: 'bg-gradient-to-b from-white to-orange-50' },
-        yellow: { gradient: 'bg-gradient-to-br from-orange-50 via-white to-yellow-50', bold: 'bg-gradient-to-r from-orange-100 to-yellow-100', minimal: 'bg-gradient-to-b from-white to-orange-50' },
-        amber: { gradient: 'bg-gradient-to-br from-orange-50 via-white to-amber-50', bold: 'bg-gradient-to-r from-orange-100 to-amber-100', minimal: 'bg-gradient-to-b from-white to-orange-50' },
-      },
-      // Primary: lime
-      lime: {
-        emerald: { gradient: 'bg-gradient-to-br from-lime-50 via-white to-emerald-50', bold: 'bg-gradient-to-r from-lime-100 to-emerald-100', minimal: 'bg-gradient-to-b from-white to-lime-50' },
-        cyan: { gradient: 'bg-gradient-to-br from-lime-50 via-white to-cyan-50', bold: 'bg-gradient-to-r from-lime-100 to-cyan-100', minimal: 'bg-gradient-to-b from-white to-lime-50' },
-        yellow: { gradient: 'bg-gradient-to-br from-lime-50 via-white to-yellow-50', bold: 'bg-gradient-to-r from-lime-100 to-yellow-100', minimal: 'bg-gradient-to-b from-white to-lime-50' },
-      },
-      // Primary: sky
-      sky: {
-        cyan: { gradient: 'bg-gradient-to-br from-sky-50 via-white to-cyan-50', bold: 'bg-gradient-to-r from-sky-100 to-cyan-100', minimal: 'bg-gradient-to-b from-white to-sky-50' },
-        blue: { gradient: 'bg-gradient-to-br from-sky-50 via-white to-blue-50', bold: 'bg-gradient-to-r from-sky-100 to-blue-100', minimal: 'bg-gradient-to-b from-white to-sky-50' },
-        indigo: { gradient: 'bg-gradient-to-br from-sky-50 via-white to-indigo-50', bold: 'bg-gradient-to-r from-sky-100 to-indigo-100', minimal: 'bg-gradient-to-b from-white to-sky-50' },
-      },
-      // Primary: fuchsia
-      fuchsia: {
-        pink: { gradient: 'bg-gradient-to-br from-fuchsia-50 via-white to-pink-50', bold: 'bg-gradient-to-r from-fuchsia-100 to-pink-100', minimal: 'bg-gradient-to-b from-white to-fuchsia-50' },
-        violet: { gradient: 'bg-gradient-to-br from-fuchsia-50 via-white to-violet-50', bold: 'bg-gradient-to-r from-fuchsia-100 to-violet-100', minimal: 'bg-gradient-to-b from-white to-fuchsia-50' },
-        purple: { gradient: 'bg-gradient-to-br from-fuchsia-50 via-white to-purple-50', bold: 'bg-gradient-to-r from-fuchsia-100 to-purple-100', minimal: 'bg-gradient-to-b from-white to-fuchsia-50' },
-      },
-    };
-
-    // Button color mappings
-    const buttonMap: Record<string, string> = {
-      indigo: 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg',
-      purple: 'bg-purple-600 text-white hover:bg-purple-700 shadow-lg',
-      blue: 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg',
-      emerald: 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg',
-      rose: 'bg-rose-600 text-white hover:bg-rose-700 shadow-lg',
-      amber: 'bg-amber-600 text-white hover:bg-amber-700 shadow-lg',
-      cyan: 'bg-cyan-600 text-white hover:bg-cyan-700 shadow-lg',
-      teal: 'bg-teal-600 text-white hover:bg-teal-700 shadow-lg',
-      pink: 'bg-pink-600 text-white hover:bg-pink-700 shadow-lg',
-      violet: 'bg-violet-600 text-white hover:bg-violet-700 shadow-lg',
-      fuchsia: 'bg-fuchsia-600 text-white hover:bg-fuchsia-700 shadow-lg',
-      lime: 'bg-lime-600 text-white hover:bg-lime-700 shadow-lg',
-      sky: 'bg-sky-600 text-white hover:bg-sky-700 shadow-lg',
-      orange: 'bg-orange-600 text-white hover:bg-orange-700 shadow-lg',
-    };
-
-    // Get the gradient combination
-    const gradientCombo = gradientMap[primary]?.[accent];
-    const heroGradient = gradientCombo ? gradientCombo[style as keyof typeof gradientCombo] || gradientCombo.gradient : 'bg-gradient-to-br from-indigo-50 via-white to-purple-50';
-    const buttonClasses = buttonMap[primary] || buttonMap.indigo;
-
-    return {
-      hero: heroGradient,
-      heroText: 'text-gray-900',
-      subheadText: 'text-gray-700',
-      button: buttonClasses,
-      sectionLight: 'bg-white',
-      sectionDark: 'bg-gray-50',
-    };
-  };
-
-  const theme = getColorClasses(data.metadata.colorScheme);
-  const heroStyle = data.metadata.heroStyle || 'centered';
-
-  // Render dynamic hero based on heroStyle
-  const renderHero = () => {
-    const baseClasses = `${theme.hero} px-4 md:px-8 relative overflow-hidden`;
-
-    if (heroStyle === 'centered') {
-      // Classic centered hero
+    if (layout === 'split') {
       return (
-        <section className={`${baseClasses} py-24 md:py-32 lg:py-40`}>
-          <div className="absolute inset-0 opacity-30">
-            <div className="absolute top-10 right-10 w-72 h-72 bg-white rounded-full blur-3xl"></div>
-            <div className="absolute bottom-10 left-10 w-96 h-96 bg-white rounded-full blur-3xl"></div>
-          </div>
-
-          <div className="max-w-5xl mx-auto text-center relative z-10">
-            <h1 className={`${theme.heroText} text-5xl md:text-6xl lg:text-7xl font-extrabold mb-8 leading-tight tracking-tight`}>
-              {data.headline}
-            </h1>
-            <p className={`${theme.subheadText} text-xl md:text-2xl lg:text-3xl mb-14 leading-relaxed max-w-4xl mx-auto font-light`}>
-              {data.subheadline}
-            </p>
-            <div className="max-w-xl mx-auto mb-8">
-              {pageSlug ? <LeadForm pageSlug={pageSlug} /> : (
-                <button className={`${theme.button} px-10 py-5 rounded-xl text-xl font-bold transition-all transform hover:scale-105 hover:shadow-2xl`}>
-                  {data.cta}
-                </button>
-              )}
+        <section key={idx} className={`${bgClass} py-16 px-4`}>
+          <div className="max-w-6xl mx-auto">
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              <div>
+                <h2 className={`${theme.sectionText} text-3xl md:text-4xl font-bold mb-6`}>
+                  {section.icon && <span className="text-5xl mr-3">{section.icon}</span>}
+                  {section.title}
+                </h2>
+                <p className={`${theme.sectionSubtext} text-lg leading-relaxed`}>
+                  {section.content}
+                </p>
+              </div>
+              <div className="bg-white shadow-lg rounded-2xl p-8 h-64 flex items-center justify-center">
+                <span className="text-8xl opacity-20">{section.icon || '✨'}</span>
+              </div>
             </div>
-            <p className="text-sm text-gray-600 mt-6 font-medium">
-              ✨ No credit card required • Free forever • 2 min setup
-            </p>
           </div>
         </section>
       );
-    } else if (heroStyle === 'split') {
-      // Two-column hero with visual area
+    }
+
+    if (layout === 'grid') {
+      const items = section.content.split(/[•\n]/).filter(Boolean);
       return (
-        <section className={`${baseClasses} py-20 md:py-28`}>
-          <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center relative z-10">
-            <div className="text-left">
-              <h1 className={`${theme.heroText} text-4xl md:text-5xl lg:text-6xl font-extrabold mb-6 leading-tight`}>
-                {data.headline}
-              </h1>
-              <p className={`${theme.subheadText} text-lg md:text-xl lg:text-2xl mb-10 leading-relaxed`}>
-                {data.subheadline}
-              </p>
-              <div className="mb-6">
-                {pageSlug ? <LeadForm pageSlug={pageSlug} /> : (
-                  <button className={`${theme.button} px-8 py-4 rounded-xl text-lg font-bold transition-all transform hover:scale-105`}>
-                    {data.cta}
-                  </button>
-                )}
-              </div>
-              <p className="text-xs text-gray-600 font-medium">
-                ✨ No credit card • Free forever
-              </p>
+        <section key={idx} className={`${bgClass} py-16 px-4`}>
+          <div className="max-w-6xl mx-auto">
+            <h2 className={`${theme.sectionText} text-3xl md:text-4xl font-bold text-center mb-12`}>
+              {section.icon && <span className="text-5xl">{section.icon}</span>}
+              <span className="block mt-4">{section.title}</span>
+            </h2>
+            <div className="grid md:grid-cols-1 gap-6 max-w-5xl mx-auto">
+              {items.slice(0, 6).map((item, i) => (
+                <div key={i} className="bg-white shadow-lg rounded-xl p-6">
+                  <p className={`${theme.sectionSubtext} text-sm leading-relaxed`}>{item.trim()}</p>
+                </div>
+              ))}
             </div>
-            <div className={`${theme.hero} rounded-3xl p-16 flex items-center justify-center shadow-2xl`}>
-              <span className="text-9xl">✨</span>
+          </div>
+        </section>
+      );
+    }
+
+    // Default: stacked layout with improved typography
+    return (
+      <section key={idx} className={`${bgClass} py-20 px-4 md:px-8`}>
+        <div className="max-w-5xl mx-auto text-center space-y-8">
+          {section.icon && (
+            <div className="text-7xl mb-6">{section.icon}</div>
+          )}
+          <h2 className={`${theme.sectionText} text-4xl md:text-5xl lg:text-6xl font-black tracking-tight leading-tight`}>
+            {section.title}
+          </h2>
+          <div className="w-24 h-1 bg-gradient-to-r from-transparent via-gray-400 to-transparent mx-auto my-8"></div>
+          <p className={`${theme.sectionSubtext} text-lg md:text-xl leading-relaxed max-w-3xl mx-auto`}>
+            {section.content}
+          </p>
+        </div>
+      </section>
+    );
+  };
+
+  // Render different hero styles
+  const renderHero = () => {
+    if (heroStyle === 'large') {
+      return (
+        <section className={`${theme.heroBg} py-32 px-4`}>
+          <div className="max-w-5xl mx-auto text-center space-y-8">
+            <h1 className={`${theme.heroText} text-5xl md:text-7xl lg:text-8xl font-black leading-tight`}>
+              {data.headline}
+            </h1>
+            <p className={`${theme.heroText} text-2xl md:text-3xl font-medium max-w-4xl mx-auto opacity-95`}>
+              {data.subheadline}
+            </p>
+            <div className="mt-12">
+              {data.goalType === 'lead' && pageSlug ? (
+                <LeadForm pageSlug={pageSlug} />
+              ) : data.goalType === 'payment' ? (
+                <PaymentBlock data={data} pageSlug={pageSlug} />
+              ) : data.goalType === 'booking' ? (
+                <BookingBlock data={data} />
+              ) : (
+                <button className={`${theme.heroButton} text-xl px-12 py-5 rounded-2xl font-bold shadow-2xl hover:scale-105 transition-all`}>
+                  {data.cta}
+                </button>
+              )}
             </div>
           </div>
         </section>
       );
     } else if (heroStyle === 'minimal') {
-      // Ultra-clean, spacious hero
-  return (
-        <section className={`${baseClasses} py-32 md:py-44`}>
-          <div className="max-w-4xl mx-auto text-center relative z-10">
-            <h1 className={`${theme.heroText} text-6xl md:text-7xl lg:text-8xl font-black mb-10 leading-tight`}>
-            {data.headline}
-          </h1>
-            <p className={`${theme.subheadText} text-2xl md:text-3xl mb-16 leading-relaxed max-w-3xl mx-auto`}>
-            {data.subheadline}
-          </p>
-            <div className="max-w-2xl mx-auto">
-              {pageSlug ? <LeadForm pageSlug={pageSlug} /> : (
-                <button className={`${theme.button} px-12 py-6 rounded-2xl text-2xl font-bold transition-all transform hover:scale-105`}>
-                {data.cta}
-              </button>
-            )}
+      return (
+        <section className="bg-white py-24 px-4 border-b border-gray-100">
+          <div className="max-w-3xl mx-auto text-center space-y-4">
+            <h1 className={`text-4xl md:text-6xl font-bold text-gray-900`}>
+              {data.headline}
+            </h1>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              {data.subheadline}
+            </p>
+            <div className="mt-8">
+              {data.goalType === 'lead' && pageSlug ? (
+                <LeadForm pageSlug={pageSlug} />
+              ) : data.goalType === 'payment' ? (
+                <PaymentBlock data={data} pageSlug={pageSlug} />
+              ) : data.goalType === 'booking' ? (
+                <BookingBlock data={data} />
+              ) : (
+                <button className="bg-gray-900 text-white px-8 py-4 rounded-lg font-semibold hover:bg-gray-800 transition-colors">
+                  {data.cta}
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
+      );
+    } else if (heroStyle === 'bold') {
+      return (
+        <section className={`${theme.heroBg} py-24 px-4 relative overflow-hidden`}>
+          <div className="absolute inset-0 bg-black opacity-10"></div>
+          <div className="max-w-4xl mx-auto text-center space-y-6 relative z-10">
+            <div className="inline-block mb-6 px-6 py-2 bg-white/20 backdrop-blur-sm rounded-full">
+              <span className="text-sm font-semibold uppercase tracking-wide">{theme.accentColor}</span>
+            </div>
+            <h1 className={`${theme.heroText} text-4xl md:text-6xl lg:text-7xl font-black leading-tight`}>
+              {data.headline}
+            </h1>
+            <p className={`${theme.heroText} text-xl md:text-2xl opacity-95`}>
+              {data.subheadline}
+            </p>
+            <div className="mt-8">
+              {data.goalType === 'lead' && pageSlug ? (
+                <LeadForm pageSlug={pageSlug} />
+              ) : data.goalType === 'payment' ? (
+                <PaymentBlock data={data} pageSlug={pageSlug} />
+              ) : data.goalType === 'booking' ? (
+                <BookingBlock data={data} />
+              ) : (
+                <button className={`${theme.heroButton} text-lg px-10 py-5 rounded-2xl font-bold shadow-2xl`}>
+                  {data.cta}
+                </button>
+              )}
             </div>
           </div>
         </section>
       );
     } else {
-      // Bold - Large, dramatic with more content
-      return (
-        <section className={`${baseClasses} py-28 md:py-36`}>
-          <div className="absolute inset-0 opacity-20">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
-            <div className="absolute bottom-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
-            <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-white rounded-full blur-3xl"></div>
+      // Default centered style
+  return (
+        <section className={`${theme.heroBg} py-20 px-4`}>
+          <div className="max-w-4xl mx-auto text-center space-y-6">
+            <h1 className={`${theme.heroText} text-4xl md:text-6xl font-bold`}>
+            {data.headline}
+          </h1>
+            <p className={`${theme.heroText} text-xl md:text-2xl opacity-90`}>
+            {data.subheadline}
+          </p>
+            <div className="mt-6">
+            {data.goalType === 'lead' && pageSlug ? (
+              <LeadForm pageSlug={pageSlug} />
+            ) : data.goalType === 'payment' ? (
+              <PaymentBlock data={data} pageSlug={pageSlug} />
+            ) : data.goalType === 'booking' ? (
+              <BookingBlock data={data} />
+            ) : (
+                <button className={`${theme.heroButton} px-8 py-4 rounded-lg text-lg font-semibold transition-colors`}>
+                {data.cta}
+              </button>
+            )}
           </div>
-
-          <div className="max-w-6xl mx-auto text-center relative z-10">
-            <div className={`inline-block px-6 py-3 rounded-full ${theme.button} text-sm font-bold mb-8`}>
-              🚀 New & Improved
+          {data.metadata.imgPrompt && (
+            <div className="mt-12">
+              <img
+                src={`https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80&${encodeURIComponent(data.metadata.imgPrompt)}`}
+                alt={data.headline}
+                className="w-full max-w-2xl mx-auto rounded-lg shadow-lg"
+                onError={(e) => {
+                  e.currentTarget.src = 'https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80';
+                }}
+              />
             </div>
-            <h1 className={`${theme.heroText} text-5xl md:text-6xl lg:text-7xl font-black mb-8 leading-tight`}>
-              {data.headline}
-            </h1>
-            <p className={`${theme.subheadText} text-xl md:text-2xl lg:text-3xl mb-12 leading-relaxed max-w-4xl mx-auto`}>
-              {data.subheadline}
-            </p>
-            <div className="max-w-2xl mx-auto mb-8">
-              {pageSlug ? <LeadForm pageSlug={pageSlug} /> : (
-                <button className={`${theme.button} px-12 py-6 rounded-2xl text-xl font-bold transition-all transform hover:scale-105 hover:shadow-2xl`}>
-                  {data.cta}
-                </button>
-              )}
-            </div>
-            <p className="text-sm text-gray-600 mt-8 font-medium">
-              ⭐ Trusted by 10,000+ users • ✨ No credit card required • 🚀 2 min setup
-            </p>
-          </div>
-        </section>
+          )}
+        </div>
+      </section>
       );
     }
   };
 
+  // No decorative transitions - let sections blend naturally
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen flex flex-col">
+      {/* Hero */}
       {renderHero()}
 
-      {/* Content Sections - Dynamic layouts based on AI selection */}
-      {data.sections.map((section, index) => {
-        const isEven = index % 2 === 0;
-        const layout = section.layout || 'centered';
-        const icon = section.icon || '✨';
+      {/* Sections */}
+      {data.sections.map((section, idx) => renderSection(section, idx))}
 
-        return (
-          <section
-            key={index}
-            className={`${isEven ? theme.sectionLight : theme.sectionDark} py-20 md:py-28 px-4 md:px-8 relative`}
-          >
-            <div className="max-w-6xl mx-auto">
-              {layout === 'centered' && (
-                // Centered layout with icon badge
-                <div className="text-center max-w-4xl mx-auto">
-                  <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl ${theme.button} mb-6`}>
-                    <span className="text-3xl">{icon}</span>
-                  </div>
-                  <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
-                    {section.title}
-                  </h2>
-                  <div className="text-lg md:text-xl text-gray-700 leading-relaxed">
-                    {section.content}
-                  </div>
-                </div>
-              )}
+      {/* Footer */}
+      <footer className={`${theme.footerBg} py-12 px-4 mt-auto`}>
+        <div className="max-w-4xl mx-auto text-center space-y-4">
+          <h3 className={`${theme.footerText} text-2xl font-bold`}>
+            {data.title}
+          </h3>
+          <p className={`${theme.footerText} text-gray-400`}>
+            Generated with LaunchPage AI
+          </p>
 
-              {layout === 'split' && (
-                // Two-column split layout
-                <div className="grid md:grid-cols-2 gap-12 items-center">
-                  <div className={`${isEven ? 'md:order-1' : 'md:order-2'}`}>
-                    <div className={`inline-block px-4 py-2 rounded-full text-sm font-semibold mb-4 ${theme.button}`}>
-                      Featured
-                    </div>
-                    <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6 leading-tight">
-                      {section.title}
-                    </h2>
-                    <div className="text-lg text-gray-700 leading-relaxed">
-                      {section.content}
-                    </div>
-                  </div>
-                  <div className={`${isEven ? 'md:order-2' : 'md:order-1'}`}>
-                    <div className={`aspect-square rounded-3xl ${theme.hero} p-12 flex items-center justify-center shadow-xl`}>
-                      <span className="text-8xl">{icon}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {layout === 'card' && (
-                // Card layout with side icon
-                <div className="max-w-4xl mx-auto">
-                  <div className="bg-white rounded-3xl shadow-2xl p-10 md:p-16 border border-gray-200">
-                    <div className="flex items-start gap-6">
-                      <div className={`flex-shrink-0 w-14 h-14 rounded-xl ${theme.button} flex items-center justify-center`}>
-                        <span className="text-2xl">{icon}</span>
-                      </div>
-                      <div className="flex-1">
-                        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6 leading-tight">
-                          {section.title}
-                        </h2>
-                        <div className="text-lg text-gray-700 leading-relaxed">
-                          {section.content}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {layout === 'feature' && (
-                // Highlighted feature
-                <div className="max-w-5xl mx-auto">
-                  <div className={`${theme.hero} rounded-3xl p-12 md:p-16 shadow-2xl`}>
-                    <div className="text-center">
-                      <span className="text-6xl mb-6 block">{icon}</span>
-                      <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6 leading-tight">
-                        {section.title}
-                      </h2>
-                      <div className="text-lg text-gray-700 leading-relaxed max-w-3xl mx-auto">
-                        {section.content}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {layout === 'list' && (
-                // List-style layout
-                <div className="max-w-4xl mx-auto">
-                  <div className="flex items-start gap-6">
-                    <span className="text-5xl flex-shrink-0">{icon}</span>
-                    <div>
-                      <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 leading-tight">
-                        {section.title}
-                      </h2>
-                      <div className="text-lg text-gray-700 leading-relaxed">
-                        {section.content}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {layout === 'highlight' && (
-                // Emphasized callout section
-                <div className="max-w-5xl mx-auto">
-                  <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-12 md:p-20 shadow-2xl text-center">
-                    <span className="text-6xl mb-6 block">{icon}</span>
-                    <h2 className="text-3xl md:text-4xl font-bold text-white mb-6 leading-tight">
-                      {section.title}
-                    </h2>
-                    <div className="text-lg text-gray-300 leading-relaxed max-w-3xl mx-auto">
-                      {section.content}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </section>
-        );
-      })}
-
-      {/* Final CTA Section - One more conversion opportunity */}
-      {!isPreview && (
-        <section className="bg-gradient-to-br from-gray-900 via-gray-800 to-black py-24 md:py-32 px-4 md:px-8 relative overflow-hidden">
-          {/* Decorative elements */}
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-20 right-20 w-96 h-96 bg-white rounded-full blur-3xl"></div>
-            <div className="absolute bottom-20 left-20 w-96 h-96 bg-white rounded-full blur-3xl"></div>
-          </div>
-
-          <div className="max-w-4xl mx-auto text-center relative z-10">
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
-              Ready to get started?
-            </h2>
-            <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto">
-              Join thousands of users who are already using {data.title}
-            </p>
-
-            {pageSlug && (
-              <div className="max-w-2xl mx-auto">
-                <LeadForm pageSlug={pageSlug} />
-              </div>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* Footer - Clean, minimal design */}
-      <footer className="bg-black text-white py-12 px-4 md:px-8 border-t border-gray-800">
-        <div className="max-w-6xl mx-auto">
-          {/* Publish Button for Preview Mode - Prominent, styled */}
-          {isPreview ? (
-            <div className="text-center">
+          {isPreview && (
             <button
               onClick={handlePublish}
               disabled={isSubmitting}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-12 py-6 rounded-2xl text-xl font-bold hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-2xl transform hover:scale-105"
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center gap-3 justify-center">
-                    <svg className="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Publishing...
-                  </span>
-                ) : (
-                  '🚀 Publish This Page'
-                )}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isSubmitting ? 'Publishing...' : 'Publish Page'}
             </button>
-              <p className="text-gray-500 text-sm mt-4">
-                Your page will be live in seconds
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-              <div className="text-center md:text-left">
-                <h3 className="text-xl font-bold mb-2">{data.title}</h3>
-                <p className="text-gray-400 text-sm">
-                  Powered by LaunchPage AI ✨
-                </p>
-              </div>
-              <div className="text-center md:text-right">
-                <p className="text-gray-500 text-sm">
-                  © 2025 All rights reserved
-                </p>
-              </div>
-            </div>
           )}
         </div>
       </footer>

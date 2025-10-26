@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import clsx from 'clsx';
 import { GeneratedPageData } from '@/lib/openai';
 import LeadForm from './LeadForm';
 import PaymentBlock from './PaymentBlock';
@@ -12,87 +13,137 @@ interface GeneratedPageProps {
   isPreview?: boolean;
 }
 
+type ThemeKey = 'minimalist' | 'gradient' | 'dark' | 'elegant' | 'playful';
+
+interface Theme {
+  heroBg: string;
+  heroText: string;
+  heroButton: string;
+  sectionBg: string;
+  sectionText: string;
+  sectionSubtext: string;
+  footerBg: string;
+  footerText: string;
+  cardBg?: string;
+  cardShadow?: string;
+  font?: string;
+}
+
+const themes: Record<ThemeKey, Theme> = {
+  minimalist: {
+    heroBg: 'bg-white',
+    heroText: 'text-gray-900',
+    heroButton: 'bg-black text-white hover:bg-gray-900',
+    sectionBg: 'bg-white',
+    sectionText: 'text-gray-900',
+    sectionSubtext: 'text-gray-600',
+    footerBg: 'bg-gray-100',
+    footerText: 'text-gray-900',
+    cardBg: 'bg-white',
+    cardShadow: 'shadow-md',
+    font: 'font-inter',
+  },
+  gradient: {
+    heroBg: 'bg-gradient-to-br from-indigo-600 to-fuchsia-500',
+    heroText: 'text-white',
+    heroButton: 'bg-white text-indigo-700 px-6 py-3 rounded-xl font-semibold hover:opacity-95',
+    sectionBg: 'bg-gray-50',
+    sectionText: 'text-gray-900',
+    sectionSubtext: 'text-gray-700',
+    footerBg: 'bg-indigo-700',
+    footerText: 'text-white',
+    cardBg: 'bg-white',
+    cardShadow: 'shadow-lg',
+    font: 'font-poppins',
+  },
+  dark: {
+    heroBg: 'bg-neutral-950',
+    heroText: 'text-gray-100',
+    heroButton: 'bg-blue-500 hover:bg-blue-600 px-6 py-3 rounded-xl font-medium text-white',
+    sectionBg: 'bg-neutral-900',
+    sectionText: 'text-gray-100',
+    sectionSubtext: 'text-gray-400',
+    footerBg: 'bg-black',
+    footerText: 'text-white',
+    cardBg: 'bg-gray-800',
+    cardShadow: 'shadow-[0_10px_40px_rgba(2,6,23,0.7)]',
+    font: 'font-satoshi',
+  },
+  elegant: {
+    heroBg: 'bg-gray-50',
+    heroText: 'text-gray-900',
+    heroButton: 'bg-indigo-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-indigo-700',
+    sectionBg: 'bg-gray-50',
+    sectionText: 'text-gray-900',
+    sectionSubtext: 'text-gray-600',
+    footerBg: 'bg-gray-100',
+    footerText: 'text-gray-900',
+    cardBg: 'bg-white',
+    cardShadow: 'shadow-lg',
+    font: 'font-sans',
+  },
+  playful: {
+    heroBg: 'bg-yellow-50',
+    heroText: 'text-gray-900',
+    heroButton: 'bg-yellow-400 hover:bg-yellow-500 text-black px-6 py-3 rounded-xl font-semibold',
+    sectionBg: 'bg-yellow-50',
+    sectionText: 'text-gray-900',
+    sectionSubtext: 'text-gray-700',
+    footerBg: 'bg-yellow-100',
+    footerText: 'text-gray-900',
+    cardBg: 'bg-white',
+    cardShadow: 'shadow-md',
+    font: 'font-rubik',
+  },
+};
+
+// helper to pick random theme if none selected
+function getRandomTheme(): ThemeKey {
+  const keys: ThemeKey[] = Object.keys(themes) as ThemeKey[];
+  return keys[Math.floor(Math.random() * keys.length)];
+}
+
 export default function GeneratedPage({ data, pageSlug, isPreview = false }: GeneratedPageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
 
   const handlePublish = async () => {
     if (!pageSlug) return;
-
     setIsSubmitting(true);
     try {
       const response = await fetch('/api/publish-page', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          pageJson: data,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pageJson: data }),
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to publish page');
-      }
-
+      if (!response.ok) throw new Error('Failed to publish page');
       const result = await response.json();
-      setShowSuccess(true);
-
-      // Copy URL to clipboard
-      await navigator.clipboard.writeText(result.url);
-
-      // Show success message
       alert(`Page published! URL copied to clipboard: ${result.url}`);
+      await navigator.clipboard.writeText(result.url);
     } catch (error) {
-      console.error('Publish error:', error);
+      console.error(error);
       alert('Failed to publish page. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const getThemeClasses = () => {
-    switch (data.metadata.theme) {
-      case 'bold':
-        return {
-          hero: 'bg-gradient-to-br from-purple-600 to-blue-600',
-          text: 'text-white',
-          button: 'bg-white text-purple-600 hover:bg-gray-100',
-          section: 'bg-gray-50',
-        };
-      case 'minimal':
-        return {
-          hero: 'bg-white border-b border-gray-200',
-          text: 'text-gray-900',
-          button: 'bg-black text-white hover:bg-gray-800',
-          section: 'bg-white',
-        };
-      default: // simple
-        return {
-          hero: 'bg-blue-600',
-          text: 'text-white',
-          button: 'bg-white text-blue-600 hover:bg-gray-100',
-          section: 'bg-gray-50',
-        };
-    }
-  };
-
-  const theme = getThemeClasses();
+  const themeKey = (data.metadata.theme as ThemeKey) || getRandomTheme();
+  const theme = themes[themeKey];
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Hero Section */}
-      <section className={`${theme.hero} py-20 px-4`}>
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className={`${theme.text} text-4xl md:text-6xl font-bold mb-6`}>
+    <div className={clsx('min-h-screen flex flex-col', theme.font)}>
+      {/* Hero */}
+      <section className={clsx(theme.heroBg, 'py-20 px-4')}>
+        <div className="max-w-4xl mx-auto text-center space-y-6">
+          <h1 className={clsx(theme.heroText, 'text-4xl md:text-6xl font-bold')}>
             {data.headline}
           </h1>
-          <p className={`${theme.text} text-xl md:text-2xl mb-8 opacity-90`}>
+          <p className={clsx(theme.heroText, 'text-xl md:text-2xl opacity-90')}>
             {data.subheadline}
           </p>
 
-          {/* CTA Button */}
-          <div className="mb-8">
+          {/* CTA */}
+          <div className="mt-6">
             {data.goalType === 'lead' && pageSlug ? (
               <LeadForm pageSlug={pageSlug} />
             ) : data.goalType === 'payment' ? (
@@ -100,13 +151,14 @@ export default function GeneratedPage({ data, pageSlug, isPreview = false }: Gen
             ) : data.goalType === 'booking' ? (
               <BookingBlock data={data} />
             ) : (
-              <button className={`${theme.button} px-8 py-4 rounded-lg text-lg font-semibold transition-colors`}>
+              <button
+                className={clsx(theme.heroButton, 'px-8 py-4 rounded-lg text-lg font-semibold transition-colors')}
+              >
                 {data.cta}
               </button>
             )}
           </div>
 
-          {/* Hero Image */}
           {data.metadata.imgPrompt && (
             <div className="mt-12">
               <img
@@ -114,7 +166,6 @@ export default function GeneratedPage({ data, pageSlug, isPreview = false }: Gen
                 alt={data.headline}
                 className="w-full max-w-2xl mx-auto rounded-lg shadow-lg"
                 onError={(e) => {
-                  // Fallback to a generic business image
                   e.currentTarget.src = 'https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80';
                 }}
               />
@@ -123,14 +174,14 @@ export default function GeneratedPage({ data, pageSlug, isPreview = false }: Gen
         </div>
       </section>
 
-      {/* Content Sections */}
-      {data.sections.map((section, index) => (
-        <section key={index} className={`${theme.section} py-16 px-4`}>
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6 text-center">
+      {/* Sections */}
+      {data.sections.map((section, idx) => (
+        <section key={idx} className={clsx(theme.sectionBg, 'py-16 px-4')}>
+          <div className="max-w-4xl mx-auto text-center space-y-4">
+            <h2 className={clsx(theme.sectionText, 'text-3xl md:text-4xl font-bold')}>
               {section.title}
             </h2>
-            <p className="text-lg text-gray-700 leading-relaxed text-center max-w-3xl mx-auto">
+            <p className={clsx(theme.sectionSubtext, 'text-lg leading-relaxed')}>
               {section.content}
             </p>
           </div>
@@ -138,14 +189,15 @@ export default function GeneratedPage({ data, pageSlug, isPreview = false }: Gen
       ))}
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <h3 className="text-2xl font-bold mb-4">{data.title}</h3>
-          <p className="text-gray-400 mb-6">
+      <footer className={clsx(theme.footerBg, 'py-12 px-4 mt-auto')}>
+        <div className="max-w-4xl mx-auto text-center space-y-4">
+          <h3 className={clsx(theme.footerText, 'text-2xl font-bold')}>
+            {data.title}
+          </h3>
+          <p className={clsx(theme.footerText, 'text-gray-400')}>
             Generated with LaunchPage AI
           </p>
 
-          {/* Publish Button for Preview Mode */}
           {isPreview && (
             <button
               onClick={handlePublish}

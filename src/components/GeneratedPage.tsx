@@ -168,7 +168,6 @@ export default function GeneratedPage({ data, pageSlug, isPreview = false }: Gen
   });
 
   const handlePublish = async () => {
-    if (!pageSlug) return;
     setIsSubmitting(true);
     try {
       const response = await fetch('/api/publish-page', {
@@ -180,6 +179,8 @@ export default function GeneratedPage({ data, pageSlug, isPreview = false }: Gen
       const result = await response.json();
       alert(`Page published! URL copied to clipboard: ${result.url}`);
       await navigator.clipboard.writeText(result.url);
+      // Redirect to the published page
+      window.location.href = result.url;
     } catch (error) {
       console.error(error);
       alert('Failed to publish page. Please try again.');
@@ -320,9 +321,7 @@ export default function GeneratedPage({ data, pageSlug, isPreview = false }: Gen
         <section className={`${theme.heroBg} py-24 px-4 relative overflow-hidden`}>
           <div className="absolute inset-0 bg-black opacity-10"></div>
           <div className="max-w-4xl mx-auto text-center space-y-6 relative z-10">
-            <div className="inline-block mb-6 px-6 py-2 bg-white/20 backdrop-blur-sm rounded-full">
-              <span className="text-sm font-semibold uppercase tracking-wide">{theme.accentColor}</span>
-            </div>
+
             <h1 className={`${theme.heroText} text-4xl md:text-6xl lg:text-7xl font-black leading-tight`}>
               {data.headline}
             </h1>

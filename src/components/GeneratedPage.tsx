@@ -309,20 +309,7 @@ export default function GeneratedPage({ data, pageSlug, isPreview = false }: Gen
             </p>
             <div className="mt-8">
               {data.goalType === 'lead' && pageSlug ? (
-                <div className="max-w-md mx-auto">
-                  <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4">
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <input
-                        type="email"
-                        placeholder="Enter your email..."
-                        className="flex-1 px-4 py-3 rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400 text-base"
-                      />
-                      <button className="bg-gray-900 text-white px-6 py-3 rounded-lg font-bold hover:bg-gray-800 transition-colors whitespace-nowrap w-full sm:w-auto">
-                        Get Started
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <LeadForm pageSlug={pageSlug} variant="white" />
               ) : data.goalType === 'payment' ? (
                 <PaymentBlock data={data} pageSlug={pageSlug} />
               ) : data.goalType === 'booking' ? (

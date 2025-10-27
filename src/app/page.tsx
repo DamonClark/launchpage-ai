@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { GeneratedPageData } from '@/lib/openai';
 import GeneratedPage from '@/components/GeneratedPage';
+import { usePageRefinement } from '@/hooks/usePageRefinement';
 
 /**
- * Professional Hand-Coded Homepage
+ * Professional Hand-Coded Homepage with AI Chat Refinement
  * Clean semantic HTML with modern design patterns
  */
 export default function HomePage() {
@@ -13,6 +14,23 @@ export default function HomePage() {
   const [generatedPage, setGeneratedPage] = useState<GeneratedPageData | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState('');
+  const [originalPrompt, setOriginalPrompt] = useState('');
+  const [chatInput, setChatInput] = useState('');
+  const [showChatPanel, setShowChatPanel] = useState(false);
+  const [renderKey, setRenderKey] = useState(0);
+
+  // Chat refinement hook
+  const { messages, refinePage, resetChat, isLoading: isRefining, error: chatError } = usePageRefinement();
+
+  // Track when generatedPage changes
+  useEffect(() => {
+    if (generatedPage) {
+      console.log('🔄 [Effect] generatedPage changed:', {
+        title: generatedPage.title,
+        color: generatedPage.metadata?.colorScheme?.primary
+      });
+    }
+  }, [generatedPage]);
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +62,9 @@ export default function HomePage() {
 
       const data = await response.json();
       setGeneratedPage(data);
+      setOriginalPrompt(prompt.trim()); // Save for refinement context
+      setShowChatPanel(true); // Show chat panel after generation
+      resetChat(); // Reset chat history
     } catch (error) {
       console.error('Generation error:', error);
       setError(error instanceof Error ? error.message : 'Failed to generate landing page');
@@ -56,6 +77,46 @@ export default function HomePage() {
     setGeneratedPage(null);
     setPrompt('');
     setError('');
+    setShowChatPanel(false);
+    resetChat();
+  };
+
+  const handleRefinePage = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    console.log('🖱️ [Page] Refine button clicked');
+    console.log('📝 [Page] Chat input:', chatInput);
+    console.log('📄 [Page] Has generated page:', !!generatedPage);
+
+    if (!chatInput.trim() || !generatedPage) {
+      console.warn('⚠️ [Page] Missing input or page:', { hasInput: !!chatInput.trim(), hasPage: !!generatedPage });
+      return;
+    }
+
+    console.log('➡️ [Page] Calling refinePage...');
+    const refinedData = await refinePage(originalPrompt, generatedPage, chatInput);
+
+    console.log('👀 [Page] Got result:', refinedData ? 'Success' : 'Failed');
+
+    if (refinedData) {
+      console.log('💾 [Page] Updating page with refined data');
+      console.log('🎨 [Page] Old color:', generatedPage.metadata?.colorScheme?.primary);
+      console.log('🎨 [Page] New color:', refinedData.metadata?.colorScheme?.primary);
+      console.log('📦 [Page] Full refined data:', refinedData);
+
+      // Force update by creating new object reference and incrementing key
+      setGeneratedPage({ ...refinedData });
+      setRenderKey(prev => prev + 1); // Force component re-render
+      setChatInput(''); // Clear input
+
+      console.log('✅ [Page] State updated, key:', renderKey + 1);
+    } else {
+      console.error('❌ [Page] No refined data returned!');
+    }
+  };
+
+  const handleChatToggle = () => {
+    setShowChatPanel(!showChatPanel);
   };
 
   return (
@@ -282,14 +343,140 @@ export default function HomePage() {
           /* Generated Page Preview */
           <section className="preview-section">
             <div className="preview-header">
-              <h2 className="preview-title">Generated Landing Page</h2>
-              <p className="preview-description">
-                Preview your page below. Click "Publish Page" to make it live and get a shareable URL.
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="preview-title">Generated Landing Page</h2>
+                  <p className="preview-description">
+                    Preview your page below. Use the chat panel to refine your design.
+                  </p>
+                </div>
+                <button
+                  onClick={handleChatToggle}
+                  className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2 text-sm font-medium text-white hover:from-blue-700 hover:to-purple-700 shadow-lg transition-all"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  {showChatPanel ? 'Hide Chat' : 'Refine with AI'}
+                </button>
+              </div>
             </div>
 
+            {/* Chat Panel */}
+            {showChatPanel && (
+              <div className="mx-auto mb-6 max-w-4xl">
+                <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+                  {/* Chat Header */}
+                  <div className="border-b bg-gradient-to-r from-blue-50 to-purple-50 px-4 py-3">
+                    <h3 className="text-sm font-semibold text-gray-900">AI Refinement Assistant</h3>
+                    <p className="text-xs text-gray-600">Tell me what to change: colors, style, content, layout, or tone</p>
+                  </div>
+
+                  {/* Quick Action Buttons */}
+                  <div className="border-b px-4 py-2">
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setChatInput('Make it more modern and professional')}
+                        disabled={isRefining}
+                        className="rounded-full bg-white px-3 py-1 text-xs text-gray-700 hover:bg-gray-100 border border-gray-300 disabled:opacity-50"
+                      >
+                        Modern
+                      </button>
+                      <button
+                        onClick={() => setChatInput('Change colors to blue and purple')}
+                        disabled={isRefining}
+                        className="rounded-full bg-white px-3 py-1 text-xs text-gray-700 hover:bg-gray-100 border border-gray-300 disabled:opacity-50"
+                      >
+                        Blue/ Purple
+                      </button>
+                      <button
+                        onClick={() => setChatInput('Make it more bold and energetic')}
+                        disabled={isRefining}
+                        className="rounded-full bg-white px-3 py-1 text-xs text-gray-700 hover:bg-gray-100 border border-gray-300 disabled:opacity-50"
+                      >
+                        Bold
+                      </button>
+                      <button
+                        onClick={() => setChatInput('Add more sections about benefits')}
+                        disabled={isRefining}
+                        className="rounded-full bg-white px-3 py-1 text-xs text-gray-700 hover:bg-gray-100 border border-gray-300 disabled:opacity-50"
+                      >
+                        More Sections
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Chat Messages */}
+                  <div className="max-h-64 overflow-y-auto p-4">
+                    {messages.length === 0 ? (
+                      <div className="flex items-center justify-center py-6 text-center text-gray-500">
+                        <div>
+                          <svg className="mx-auto h-10 w-10 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                          <p className="text-sm font-medium">Start refining your page</p>
+                          <p className="text-xs text-gray-400 mt-1">Click a quick action above or type your own request</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {messages.map((msg, idx) => (
+                          <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
+                              msg.role === 'user'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {msg.content}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {isRefining && (
+                      <div className="flex justify-start">
+                        <div className="rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-600">
+                          <div className="flex items-center gap-2">
+                            <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400" />
+                            <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:0.2s]" />
+                            <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:0.4s]" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Chat Input */}
+                  <div className="border-t p-4">
+                    {chatError && (
+                      <div className="mb-2 rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">
+                        {chatError}
+                      </div>
+                    )}
+                    <form onSubmit={handleRefinePage} className="flex gap-2">
+                      <input
+                        type="text"
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        placeholder="e.g., 'Make colors more vibrant', 'Change to modern style', 'Add 2 more sections'"
+                        disabled={isRefining}
+                        className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                      />
+                      <button
+                        type="submit"
+                        disabled={!chatInput.trim() || isRefining}
+                        className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-300"
+                      >
+                        Refine
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="preview-container">
-              <GeneratedPage data={generatedPage} isPreview={true} />
+              <GeneratedPage key={renderKey} data={generatedPage} isPreview={true} />
             </div>
           </section>
         )}

@@ -160,16 +160,19 @@ function getSectionLayout(section: GeneratedPageData['sections'][0], idx: number
 
 export default function GeneratedPage({ data, pageSlug, isPreview = false }: GeneratedPageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [randomTheme, setRandomTheme] = useState<ThemeKey>('indigo');
-  const [heroStyle, setHeroStyle] = useState<string>('centered');
   const [mounted, setMounted] = useState(false);
 
+  // Get the color from data, or fallback to random if not specified
+  const selectedColor = data.metadata?.colorScheme?.primary || getRandomTheme();
+  const selectedTheme = themes[selectedColor as ThemeKey] || themes['indigo'];
+
+  // Get hero style from data, or use default
+  const heroStyle = data.metadata?.heroStyle || 'centered';
+
   useEffect(() => {
+    console.log('🎨 [GeneratedPage] Rendering with color:', selectedColor);
     setMounted(true);
-    setRandomTheme(getRandomTheme());
-    const styles = ['centered', 'large', 'minimal', 'bold'];
-    setHeroStyle(styles[Math.floor(Math.random() * styles.length)]);
-  }, []);
+  }, [selectedColor]);
 
   const handlePublish = async () => {
     setIsSubmitting(true);
@@ -192,8 +195,8 @@ export default function GeneratedPage({ data, pageSlug, isPreview = false }: Gen
     }
   };
 
-  // Use random theme selected on component mount
-  const theme = themes[randomTheme];
+  // Use the selected theme from data
+  const theme = selectedTheme;
 
   if (!mounted) {
     return null;
@@ -271,17 +274,18 @@ export default function GeneratedPage({ data, pageSlug, isPreview = false }: Gen
 
   // Render different hero styles
   const renderHero = () => {
-    if (heroStyle === 'large') {
+    if (heroStyle === 'bold') {
       return (
-        <section className={`${theme.heroBg} py-32 px-4`}>
-          <div className="max-w-5xl mx-auto text-center space-y-8">
-            <h1 className={`${theme.heroText} text-5xl md:text-7xl lg:text-8xl font-black leading-tight`}>
+        <section className={`${theme.heroBg} py-24 px-4 relative overflow-hidden`}>
+          <div className="absolute inset-0 bg-black opacity-10"></div>
+          <div className="max-w-4xl mx-auto text-center space-y-6 relative z-10">
+            <h1 className={`${theme.heroText} text-4xl md:text-6xl lg:text-7xl font-black leading-tight`}>
               {data.headline}
             </h1>
-            <p className={`${theme.heroText} text-2xl md:text-3xl font-medium max-w-4xl mx-auto opacity-95`}>
+            <p className={`${theme.heroText} text-xl md:text-2xl opacity-95`}>
               {data.subheadline}
             </p>
-            <div className="mt-12">
+            <div className="mt-8">
               {data.goalType === 'lead' && pageSlug ? (
                 <LeadForm pageSlug={pageSlug} />
               ) : data.goalType === 'payment' ? (
@@ -289,7 +293,7 @@ export default function GeneratedPage({ data, pageSlug, isPreview = false }: Gen
               ) : data.goalType === 'booking' ? (
                 <BookingBlock data={data} />
               ) : (
-                <button className={`${theme.heroButton} text-xl px-12 py-5 rounded-2xl font-bold shadow-2xl hover:scale-105 transition-all`}>
+                <button className={`${theme.heroButton} text-lg px-10 py-5 rounded-2xl font-bold shadow-2xl`}>
                   {data.cta}
                 </button>
               )}
@@ -316,34 +320,6 @@ export default function GeneratedPage({ data, pageSlug, isPreview = false }: Gen
                 <BookingBlock data={data} />
               ) : (
                 <button className="bg-gray-900 text-white px-8 py-4 rounded-lg font-semibold hover:bg-gray-800 transition-colors">
-                  {data.cta}
-                </button>
-              )}
-            </div>
-          </div>
-        </section>
-      );
-    } else if (heroStyle === 'bold') {
-      return (
-        <section className={`${theme.heroBg} py-24 px-4 relative overflow-hidden`}>
-          <div className="absolute inset-0 bg-black opacity-10"></div>
-          <div className="max-w-4xl mx-auto text-center space-y-6 relative z-10">
-
-            <h1 className={`${theme.heroText} text-4xl md:text-6xl lg:text-7xl font-black leading-tight`}>
-              {data.headline}
-            </h1>
-            <p className={`${theme.heroText} text-xl md:text-2xl opacity-95`}>
-              {data.subheadline}
-            </p>
-            <div className="mt-8">
-              {data.goalType === 'lead' && pageSlug ? (
-                <LeadForm pageSlug={pageSlug} />
-              ) : data.goalType === 'payment' ? (
-                <PaymentBlock data={data} pageSlug={pageSlug} />
-              ) : data.goalType === 'booking' ? (
-                <BookingBlock data={data} />
-              ) : (
-                <button className={`${theme.heroButton} text-lg px-10 py-5 rounded-2xl font-bold shadow-2xl`}>
                   {data.cta}
                 </button>
               )}

@@ -184,3 +184,225 @@ Page 4: 6 sections, bold hero, [split, list, centered, highlight, feature, card]
     throw new Error('Failed to generate landing page. Please try again.');
   }
 }
+
+/**
+ * Refine an existing landing page based on user feedback
+ * @param originalPrompt - The original user prompt that created the page
+ * @param currentPageData - The current page data to refine
+ * @param refinementPrompt - User's refinement request (e.g., "make it more modern")
+ * @param conversationHistory - Previous chat messages for context
+ */
+export async function refinePageFromChat(
+  originalPrompt: string,
+  currentPageData: GeneratedPageData,
+  refinementPrompt: string,
+  conversationHistory: Array<{ role: string; content: string }> = []
+): Promise<GeneratedPageData> {
+  if (!openai) {
+    throw new Error('OpenAI is not configured. Please set OPENAI_API_KEY environment variable.');
+  }
+
+  // Log what we're working with
+  console.log('🔄 Starting refinement with:', {
+    prompt: refinementPrompt,
+    currentColor: currentPageData.metadata?.colorScheme?.primary,
+    hasHistory: conversationHistory.length > 0
+  });
+
+  // Color name mapping
+  const colorMap: Record<string, string> = {
+    'green': 'emerald', 'blue': 'blue', 'purple': 'purple', 'pink': 'pink',
+    'red': 'rose', 'orange': 'orange', 'teal': 'teal', 'cyan': 'cyan',
+    'yellow': 'amber', 'gold': 'amber'
+  };
+
+  const systemPrompt = `You are a landing page refinement assistant. Your job is to modify the provided landing page based on user requests.
+
+CRITICAL RULES:
+1. You will receive the CURRENT PAGE DATA as JSON
+2. You will receive the USER'S REFINEMENT REQUEST
+3. You MUST modify the page according to the request
+4. Return ONLY valid JSON (no markdown, no explanations)
+
+AVAILABLE COLORS: blue, purple, indigo, emerald, rose, amber, cyan, teal, pink, violet, fuchsia, lime, sky, orange
+
+COLOR CHANGES:
+- User says any color (green, blue, red, etc) → change colorScheme.primary to the matching value
+- Example: "make it green" → set primary to "emerald"
+- Example: "change to blue" → set primary to "blue"
+
+STYLE CHANGES:
+- "more modern" → use contemporary colors, minimal/split hero
+- "more bold" → vibrant colors, bold hero, gradient style
+- "more minimal" → minimal style, fewer sections, clean layouts
+- "more professional" → blue/purple, minimal style
+
+CONTENT CHANGES:
+- "add sections" → increase section count (keep 3-6)
+- "remove sections" → decrease to 3-4 sections
+- "change headline" → update headline
+- "different CTA" → update cta text
+
+You MUST make the requested changes. Do not return unchanged data.
+
+Return ONLY valid JSON with this structure:
+{
+  "title": "page title",
+  "headline": "main headline",
+  "subheadline": "subheadline",
+  "cta": "button text",
+  "goalType": "lead",
+  "priceId": null,
+  "sections": [{"title": "...", "content": "...", "layout": "...", "icon": "..."}],
+  "metadata": {
+    "theme": "simple",
+    "imgPrompt": "",
+    "heroStyle": "centered|split|minimal|bold",
+    "colorScheme": {
+      "primary": "...",
+      "accent": "...",
+      "style": "gradient|bold|minimal"
+    }
+  }
+}`;
+
+
+  try {
+    // Build conversation messages
+    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+      { role: 'system', content: systemPrompt }
+    ];
+
+    // Add conversation history (excluding system messages)
+    conversationHistory.forEach(msg => {
+      if (msg.role !== 'system') {
+        messages.push({
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content
+        });
+      }
+    });
+
+    // Add the current page data as context
+    messages.push({
+      role: 'user',
+      content: `HERE IS THE CURRENT PAGE DATA:\n${JSON.stringify(currentPageData, null, 2)}\n\nUSER'S REQUEST: ${refinementPrompt}\n\nApply the requested changes to the page above and return the COMPLETE updated JSON.`
+    });
+
+    console.log('📤 Sending to OpenAI:', {
+      refinementPrompt,
+      currentColor: currentPageData.metadata?.colorScheme?.primary,
+      messageCount: messages.length
+    });
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages,
+      temperature: 0.7,
+      max_tokens: 2000,
+    });
+
+    const response = completion.choices[0]?.message?.content;
+    if (!response) {
+      throw new Error('No response from OpenAI');
+    }
+
+    console.log('📥 Received from OpenAI (first 200 chars):', response.substring(0, 200));
+
+    // Extract JSON from response
+    let jsonString = response.trim();
+
+    // Remove markdown code blocks if present
+    const markdownMatch = jsonString.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (markdownMatch) {
+      jsonString = markdownMatch[1].trim();
+    }
+
+    // Find JSON object boundaries
+    const firstBrace = jsonString.indexOf('{');
+    const lastBrace = jsonString.lastIndexOf('}');
+
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      jsonString = jsonString.substring(firstBrace, lastBrace + 1);
+    }
+
+    // Parse JSON
+    let parsed: GeneratedPageData;
+    try {
+      parsed = JSON.parse(jsonString);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      console.error('Response was:', jsonString);
+      throw new Error('Failed to parse AI response. The AI returned invalid JSON.');
+    }
+
+    // Validate and fix structure
+    if (!parsed.title || !parsed.headline || !parsed.subheadline || !parsed.cta) {
+      console.error('Missing required fields:', parsed);
+      throw new Error('AI response missing required fields');
+    }
+
+    // Ensure sections exist and is an array
+    if (!parsed.sections || !Array.isArray(parsed.sections)) {
+      parsed.sections = [];
+    }
+
+    // Ensure metadata exists
+    if (!parsed.metadata) {
+      parsed.metadata = {
+        theme: 'simple',
+        imgPrompt: '',
+        heroStyle: 'centered',
+        colorScheme: {
+          primary: 'blue',
+          accent: 'cyan',
+          style: 'gradient'
+        }
+      };
+    }
+
+    // Validate colorScheme
+    if (!parsed.metadata.colorScheme) {
+      parsed.metadata.colorScheme = {
+        primary: 'blue',
+        accent: 'cyan',
+        style: 'gradient'
+      };
+    }
+
+    // Ensure the goalType is 'lead'
+    parsed.goalType = 'lead';
+
+    // Validate section structure
+    parsed.sections = parsed.sections.map(section => ({
+      ...section,
+      title: section.title || 'Section Title',
+      content: section.content || 'Section content',
+      layout: section.layout || 'centered',
+      icon: section.icon || '✨'
+    }));
+
+    // Log results
+    const oldColor = currentPageData.metadata?.colorScheme?.primary;
+    const newColor = parsed.metadata?.colorScheme?.primary;
+    console.log('✅ Parse successful');
+    console.log('🎨 Color:', oldColor, '→', newColor);
+    console.log('📏 Sections:', currentPageData.sections.length, '→', parsed.sections.length);
+
+    // Validate that changes were made
+    const colorChanged = oldColor !== newColor;
+    const sectionsChanged = currentPageData.sections.length !== parsed.sections.length;
+
+    if (!colorChanged && !sectionsChanged && refinementPrompt.toLowerCase().includes('make it')) {
+      console.warn('⚠️  No changes detected! Request:', refinementPrompt);
+    }
+
+    return parsed;
+  } catch (error) {
+    console.error('OpenAI refinement error:', error);
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Failed to refine landing page. Please try again.');
+  }
+}

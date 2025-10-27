@@ -28,7 +28,7 @@ interface Theme {
 
 const colorThemes: Record<ThemeKey, Theme> = {
   indigo: {
-    heroBg: 'bg-gradient-to-br from-indigo-600 via-indigo-500 to-purple-600',
+    heroBg: 'bg-gradient-to-br from-indigo-600 via-indigo-500 to-indigo-600',
     heroText: 'text-white',
     heroButton: 'bg-white text-indigo-600 hover:bg-indigo-50 px-8 py-4 rounded-xl font-bold shadow-xl transition-all',
     sectionBg: 'bg-indigo-50',
@@ -39,18 +39,18 @@ const colorThemes: Record<ThemeKey, Theme> = {
     accentColor: 'indigo',
   },
   purple: {
-    heroBg: 'bg-gradient-to-br from-purple-600 via-purple-500 to-pink-600',
+    heroBg: 'bg-gradient-to-br from-indigo-600 via-indigo-500 to-purple-600',
     heroText: 'text-white',
     heroButton: 'bg-white text-purple-600 hover:bg-purple-50 px-8 py-4 rounded-xl font-bold shadow-xl transition-all',
     sectionBg: 'bg-purple-50',
     sectionText: 'text-purple-900',
     sectionSubtext: 'text-purple-700',
-    footerBg: 'bg-purple-900',
+    footerBg: 'bg-indigo-900',
     footerText: 'text-white',
     accentColor: 'purple',
   },
   blue: {
-    heroBg: 'bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-600',
+    heroBg: 'bg-gradient-to-br from-blue-600 via-blue-500 to-blue-600',
     heroText: 'text-white',
     heroButton: 'bg-white text-blue-600 hover:bg-blue-50 px-8 py-4 rounded-xl font-bold shadow-xl transition-all',
     sectionBg: 'bg-blue-50',
@@ -61,7 +61,7 @@ const colorThemes: Record<ThemeKey, Theme> = {
     accentColor: 'blue',
   },
   emerald: {
-    heroBg: 'bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-600',
+    heroBg: 'bg-gradient-to-br from-emerald-600 via-emerald-500 to-emerald-600',
     heroText: 'text-white',
     heroButton: 'bg-white text-emerald-600 hover:bg-emerald-50 px-8 py-4 rounded-xl font-bold shadow-xl transition-all',
     sectionBg: 'bg-emerald-50',
@@ -72,7 +72,7 @@ const colorThemes: Record<ThemeKey, Theme> = {
     accentColor: 'emerald',
   },
   rose: {
-    heroBg: 'bg-gradient-to-br from-rose-600 via-rose-500 to-pink-600',
+    heroBg: 'bg-gradient-to-br from-rose-600 via-rose-500 to-rose-600',
     heroText: 'text-white',
     heroButton: 'bg-white text-rose-600 hover:bg-rose-50 px-8 py-4 rounded-xl font-bold shadow-xl transition-all',
     sectionBg: 'bg-rose-50',
@@ -83,7 +83,7 @@ const colorThemes: Record<ThemeKey, Theme> = {
     accentColor: 'rose',
   },
   amber: {
-    heroBg: 'bg-gradient-to-br from-amber-600 via-amber-500 to-orange-600',
+    heroBg: 'bg-gradient-to-br from-amber-600 via-amber-500 to-amber-600',
     heroText: 'text-white',
     heroButton: 'bg-white text-amber-600 hover:bg-amber-50 px-8 py-4 rounded-xl font-bold shadow-xl transition-all',
     sectionBg: 'bg-amber-50',
@@ -94,7 +94,7 @@ const colorThemes: Record<ThemeKey, Theme> = {
     accentColor: 'amber',
   },
   cyan: {
-    heroBg: 'bg-gradient-to-br from-cyan-600 via-cyan-500 to-blue-600',
+    heroBg: 'bg-gradient-to-br from-cyan-600 via-cyan-500 to-cyan-600',
     heroText: 'text-white',
     heroButton: 'bg-white text-cyan-600 hover:bg-cyan-50 px-8 py-4 rounded-xl font-bold shadow-xl transition-all',
     sectionBg: 'bg-cyan-50',
@@ -105,7 +105,7 @@ const colorThemes: Record<ThemeKey, Theme> = {
     accentColor: 'cyan',
   },
   teal: {
-    heroBg: 'bg-gradient-to-br from-teal-600 via-teal-500 to-emerald-600',
+    heroBg: 'bg-gradient-to-br from-teal-600 via-teal-500 to-teal-600',
     heroText: 'text-white',
     heroButton: 'bg-white text-teal-600 hover:bg-teal-50 px-8 py-4 rounded-xl font-bold shadow-xl transition-all',
     sectionBg: 'bg-teal-50',
@@ -116,7 +116,7 @@ const colorThemes: Record<ThemeKey, Theme> = {
     accentColor: 'teal',
   },
   pink: {
-    heroBg: 'bg-gradient-to-br from-pink-600 via-pink-500 to-rose-600',
+    heroBg: 'bg-gradient-to-br from-pink-600 via-pink-500 to-pink-600',
     heroText: 'text-white',
     heroButton: 'bg-white text-pink-600 hover:bg-pink-50 px-8 py-4 rounded-xl font-bold shadow-xl transition-all',
     sectionBg: 'bg-pink-50',
@@ -127,7 +127,7 @@ const colorThemes: Record<ThemeKey, Theme> = {
     accentColor: 'pink',
   },
   violet: {
-    heroBg: 'bg-gradient-to-br from-violet-600 via-violet-500 to-purple-600',
+    heroBg: 'bg-gradient-to-br from-violet-600 via-violet-500 to-violet-600',
     heroText: 'text-white',
     heroButton: 'bg-white text-violet-600 hover:bg-violet-50 px-8 py-4 rounded-xl font-bold shadow-xl transition-all',
     sectionBg: 'bg-violet-50',
